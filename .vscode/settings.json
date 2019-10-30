@@ -1,0 +1,27 @@
+{
+    "emmet.includeLanguages": {
+        "typescript": "typescriptreact"
+    },
+    "emmet.syntaxProfiles": {
+        "typescript": "tsx"
+    },
+    "eslint.alwaysShowStatus": true,
+    "eslint.autoFixOnSave": true,
+    "eslint.packageManager": "yarn",
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        {
+            "language": "typescript",
+            "autoFix": true
+        },
+        {
+            "language": "typescriptreact",
+            "autoFix": true
+        }
+    ],
+    "typescript.suggest.autoImports": false,
+    "typescript.suggest.enabled": false,
+    "javascript.suggest.autoImports": false,
+    "javascript.suggest.enabled": false
+}
