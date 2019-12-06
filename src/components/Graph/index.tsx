@@ -1,15 +1,12 @@
 import React from 'react'
-import BaseGraph from 'react-graph-vis'
+import { useMachine } from '@xstate/react'
 
-export const Graph = (props: any) => (
-  <BaseGraph
-    options={{
-      locale: 'pt-br',
-      layout: {
-        hierarchical: false,
-      },
-    }}
-    style={{ height: '75vh', width: '100%' }}
-    {...props}
-  />
-)
+export const Graph = ({ tree }: any) => {
+  const [current, send, service] = useMachine(tree.getMachine())
+
+  if (!tree || tree.isEmpty()) {
+    return null
+  }
+
+  return null
+}

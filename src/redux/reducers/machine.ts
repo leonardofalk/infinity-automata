@@ -4,14 +4,14 @@ import { NodeTree } from '../../structs/NodeTree'
 
 export const INITIAL_STATE = {
   tree: new NodeTree(),
-  words: [],
-  nodes: [],
-  edges: [],
+  test: null,
+  isFinal: false,
 }
 
 export const { Types, Creators } = createActions(
   {
     addWord: ['word'],
+    addTest: ['test'],
     reset: null,
     states: [],
   },
@@ -19,27 +19,36 @@ export const { Types, Creators } = createActions(
 )
 
 export const reducer = createReducer(INITIAL_STATE, {
-  [Types.ADD_WORD]: (state: any, { word }) => {
-    const words: string[] = _.uniq(
-      word
+  [Types.ADD_TEST]: (state: any, { test: bTest }) => {
+    const isFinal = bTest[bTest.length - 1] === ' '
+    const test = _.last(
+      bTest
         .toString()
         .trim()
         .split(/\W+/)
     )
 
+    return {
+      ...state,
+      isFinal,
+      test,
+    }
+  },
+
+  [Types.ADD_WORD]: (state: any, { word }) => {
+    const words = _.uniq<string>(
+      word
+        .toString()
+        .trim()
+        .split(/\W+/)
+    )
     const tree = new NodeTree()
 
-    words.forEach(word => tree.insertWord(word))
-
-    const edges: any[] = tree.getEdges()
-    const nodes: any[] = tree.getNodes()
+    tree.addWords(...words)
 
     return {
       ...state,
       tree,
-      words,
-      edges,
-      nodes: [...nodes, { label: `q${nodes.length}*`, id: nodes.length }],
     }
   },
   [Types.RESET]: () => INITIAL_STATE,

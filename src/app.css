@@ -1,0 +1,11 @@
+.bad-row {
+  background-color: red
+}
+
+.good-row {
+  background-color: green
+}
+
+.current-row {
+  background-color: blue
+}

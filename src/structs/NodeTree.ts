@@ -1,82 +1,137 @@
-import _ from 'lodash'
+import { createMachine } from '@xstate/fsm'
 
 export class NodeTree {
-  children: NodeTree[]
-  letters: string[]
-  level: number
-  last: boolean
+  words: string[]
+  cache: any = {}
+  state: any = {}
+  alphabet: string[] = []
 
-  private _childrenIndex: any
-
-  constructor(options: any = {}) {
-    this.level = options.level || 0
-    this.last = false
-    this.children = []
-    this.letters = []
-    this._childrenIndex = {}
+  constructor() {
+    this.words = []
+    this.cache = {}
+    this.state = {}
+    this.alphabet = []
   }
 
-  insertWord(word: string) {
-    if (word === '') {
-      this.last = true
+  isEmpty() {
+    return this.words.length === 0
+  }
 
-      return
+  getWordProps(word: string, stateKey: string = 'q0'): any {
+    const [first, rest] = [word.slice(0, 1), word.slice(1).toString()]
+    const currentState = this.state[stateKey]
+
+    if (currentState) {
+      const nextState = currentState.on[first]
+
+      if (nextState) {
+        if (nextState === 'ε') {
+          if (rest === '') {
+            return { final: true, validated: true, state: stateKey }
+          }
+
+          return { final: false, validated: false, state: stateKey }
+        }
+
+        if (rest === '') {
+          if (currentState.final) {
+            return { final: true, validated: true, state: stateKey }
+          } else {
+            return { final: false, validated: true, state: stateKey }
+          }
+        } else {
+          return this.getWordProps(rest, nextState)
+        }
+      }
     }
 
-    this.letters = _.uniq([...this.letters, word[0]])
+    return { final: false, validated: false, state: stateKey }
+  }
 
-    const rest = word.slice(1)
-    const index = this._childrenIndex[word[0]]
+  findOrCreateNextKey(letter: string, currentState: number, final: boolean): number {
+    if (final) {
+      return -1
+    }
 
-    if (index) {
-      const nextNode = this.children[index]
+    if (!this.cache[currentState]) {
+      this.cache[currentState] = { letter, nextState: currentState + 1 }
 
-      nextNode.insertWord(rest)
-
-      this.children[this._childrenIndex[word[0]]] = nextNode
+      return this.cache[currentState].nextState
+    } else if (this.cache[currentState] && this.cache[currentState].letter === letter) {
+      return this.cache[currentState].nextState
     } else {
-      const nextNode = new NodeTree({ level: this.getNextLevel() })
-
-      nextNode.insertWord(rest)
-
-      this._childrenIndex[word[0]] = this.children.push(nextNode) - 1
+      return this.findOrCreateNextKey(letter, currentState + 1, final)
     }
   }
 
-  getNextLevel(): number {
-    return this.level + 1
-  }
-
-  buildEdges(): any[] {
-    const { letters: label, level: from } = this
-
-    if (!label) {
-      return []
-    }
-
-    const self = _.map(this.children, ({ level: to }) => ({ label, route: `${from}|${to}` }))
-    const children = this.children.flatMap(c => c.buildEdges())
-
-    return [...self, ...children]
-  }
-
-  getEdges(): any[] {
-    return _.map(_.groupBy(this.buildEdges(), 'route'), (edges, route) => {
-      const [from, to] = route.split('|')
-      const label = _.join(_.uniq(_.map(edges, 'label')), '|')
-
-      return { from, to, label }
+  getMachine() {
+    return createMachine({
+      id: 'main',
+      initial: 'q0',
+      states: this.getState(),
     })
   }
 
-  getNodes(): any[] {
-    const { level, last, letters } = this
-    const children = this.children.flatMap(c => c.getNodes())
+  addWords(...words: string[]) {
+    this.words = words.sort((a, b) => b.length - a.length)
 
-    if (!letters) {
-      return []
+    this.initializeState()
+    this.buildState()
+  }
+
+  initializeState() {
+    this.state = {}
+    this.cache = {}
+  }
+
+  buildState() {
+    this.words.forEach(word => this.buildWordState(0, word.toString().toLowerCase()))
+  }
+
+  buildWordState(state: number, word: string) {
+    const [first, rest] = [word.slice(0, 1), word.slice(1)]
+    const final = rest.toString() === ''
+    const nextState = this.findOrCreateNextKey(first, state, final)
+    const nextStateKey = `q${nextState}`
+    const prevState = this.state[`q${state}`] || { on: {} }
+
+    this.addLetterToAlphabet(first)
+
+    this.state[`q${state}`] = {
+      ...prevState,
+      on: {
+        ...prevState.on,
+        [first]: prevState.on[first]
+          ? final
+            ? [prevState.on[first], 'ε'].join(' | ')
+            : nextStateKey
+          : final
+          ? 'ε'
+          : nextStateKey,
+      },
+      type: final ? 'final' : undefined,
     }
 
-    return [{ label: `q${level}${last ? '*' : ''}`, id: level, last }, ...children]
+    if (!final) {
+      this.buildWordState(nextState, rest)
+    }
+  }
+
+  getState() {
+    return { ...this.state }
+  }
+
+  getCache() {
+    return this.cache
+  }
+
+  addLetterToAlphabet(letter: string) {
+    if (!this.alphabet.includes(letter)) {
+      this.alphabet = this.alphabet.concat(letter)
+    }
+  }
+
+  getAlphabet() {
+    return this.alphabet.sort()
   }
 }

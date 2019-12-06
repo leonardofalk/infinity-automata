@@ -1,3 +1,5 @@
 export * from './Header'
 export * from './Graph'
 export * from './Gramatica'
+export * from './UML'
+export * from './Tester'
